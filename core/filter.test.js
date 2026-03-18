@@ -1,5 +1,5 @@
-import assert from "node:assert";
-import { CommentFilter } from "./filter.js";
+const assert = require("node:assert");
+const { CommentFilter } = require("./filter.js");
 
 const now = Date.now();
 

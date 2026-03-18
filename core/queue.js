@@ -2,7 +2,7 @@
 // 読み上げ順序と優先度を制御する
 
 /** 優先度定義 */
-export const Priority = {
+const Priority = {
   GIFT: 10,
   FIRST_COMMENT: 8,
   NORMAL: 5,
@@ -12,7 +12,7 @@ export const Priority = {
 const MAX_QUEUE_SIZE = 10;
 const EXPIRE_MS = 60_000;
 
-export class CommentQueue {
+class CommentQueue {
   constructor() {
     this._queue = []; // { comment, priority, addedAt }
     this._speaking = false;
@@ -109,3 +109,5 @@ export class CommentQueue {
     );
   }
 }
+
+module.exports = { CommentQueue, Priority };

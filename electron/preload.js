@@ -1,6 +1,47 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('tiktalk', {
+  // --- TikTokパイプライン制御（新規） ---
+
+  // TikTok接続開始
+  startTikTok: (username) => {
+    ipcRenderer.send('start-tiktok', username);
+  },
+
+  // TikTok接続停止
+  stopTikTok: () => {
+    ipcRenderer.send('stop-tiktok');
+  },
+
+  // Node.jsパイプライン制御（エイリアス）
+  startNodeReader: (username) => {
+    ipcRenderer.send('start-node-reader', username);
+  },
+
+  stopNodeReader: () => {
+    ipcRenderer.send('stop-node-reader');
+  },
+
+  // TTS話者リスト取得
+  getSpeakers: () => ipcRenderer.invoke('get-speakers'),
+
+  // 設定の動的更新
+  updateSettings: (settings) => {
+    ipcRenderer.send('update-settings', settings);
+  },
+
+  // ユーザー辞書追加
+  addUserDict: ({ userId, reading }) => {
+    ipcRenderer.send('add-user-dict', { userId, reading });
+  },
+
+  // キューサイズ通知コールバック
+  onQueueSize: (callback) => {
+    ipcRenderer.on('queue-size', (_event, size) => callback(size));
+  },
+
+  // --- 既存: Python読み上げ（セットアップ用に残す） ---
+
   // 読み上げ開始
   startReader: (username) => {
     ipcRenderer.send('start-reader', username);

@@ -28,7 +28,7 @@ function zenSlice(str, maxZen) {
   return chars.slice(0, i).join("");
 }
 
-export class CommentFormatter {
+class CommentFormatter {
   /**
    * @param {Record<string, string>} userDict - { userId: "よみがな" }
    */
@@ -92,3 +92,5 @@ export class CommentFormatter {
     this.userDict[userId] = reading;
   }
 }
+
+module.exports = { CommentFormatter };

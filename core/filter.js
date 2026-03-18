@@ -6,7 +6,7 @@ const EMOJI_REGEX = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\
 
 const URL_REGEX = /^https?:\/\/\S+$/i;
 
-export class CommentFilter {
+class CommentFilter {
   /**
    * @param {string[]} ngWords - NGワードリスト
    */
@@ -91,3 +91,5 @@ export class CommentFilter {
     this.userHistory.clear();
   }
 }
+
+module.exports = { CommentFilter };

@@ -1,5 +1,5 @@
-import assert from "node:assert";
-import { CommentFormatter } from "./formatter.js";
+const assert = require("node:assert");
+const { CommentFormatter } = require("./formatter.js");
 
 const fmt = new CommentFormatter({ user1: "たろう" });
 

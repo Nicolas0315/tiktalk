@@ -131,13 +131,21 @@ const styles = {
   },
 };
 
+const TYPE_ICONS = {
+  gift: '\uD83C\uDF81',
+  member: '\uD83D\uDC4B',
+  chat: '\uD83D\uDCAC',
+};
+
 function App() {
   const [setupCompleted, setSetupCompleted] = useState(null); // null=未確認, true/false
   const [username, setUsername] = useState('');
   const [running, setRunning] = useState(false);
-  const [status, setStatus] = useState('stopped'); // stopped | started | error
+  const [connectedUser, setConnectedUser] = useState('');
+  const [status, setStatus] = useState('stopped'); // stopped | connected | disconnected | error | speaking | idle
   const [errorMsg, setErrorMsg] = useState('');
   const [comments, setComments] = useState([]);
+  const [queueSize, setQueueSize] = useState(0);
   const [ttsWarning, setTtsWarning] = useState(false);
   const logRef = useRef(null);
 
@@ -168,28 +176,42 @@ function App() {
     if (!window.tiktalk) return;
 
     window.tiktalk.onComment((data) => {
-      if (data.type === 'comment') {
-        setComments((prev) => {
-          const next = [...prev, data];
-          // 最新10件のみ保持
-          return next.slice(-10);
-        });
-      }
+      setComments((prev) => {
+        const next = [...prev, data];
+        return next.slice(-30);
+      });
     });
 
     window.tiktalk.onStatus((data) => {
-      if (data.type === 'started') {
-        setStatus('started');
+      if (data.type === 'connected') {
+        setStatus('connected');
+        setRunning(true);
+        setErrorMsg('');
+      } else if (data.type === 'disconnected') {
+        setStatus('disconnected');
+        setRunning(false);
+        setConnectedUser('');
+      } else if (data.type === 'error') {
+        setStatus('error');
+        setErrorMsg(data.message || 'エラーが発生しました');
+      } else if (data.type === 'speaking') {
+        setStatus('speaking');
+      } else if (data.type === 'idle') {
+        setStatus('connected');
+      } else if (data.type === 'started') {
+        setStatus('connected');
         setRunning(true);
         setErrorMsg('');
       } else if (data.type === 'stopped') {
         setStatus('stopped');
         setRunning(false);
-      } else if (data.type === 'error') {
-        setStatus('error');
-        setErrorMsg(data.message || 'エラーが発生しました');
+        setConnectedUser('');
       }
     });
+
+    if (window.tiktalk.onQueueSize) {
+      window.tiktalk.onQueueSize((size) => setQueueSize(size));
+    }
   }, []);
 
   // ログ自動スクロール
@@ -204,18 +226,22 @@ function App() {
     if (!name) return;
     if (window.tiktalk) {
       setComments([]);
-      window.tiktalk.startReader(name);
+      setConnectedUser(name);
+      window.tiktalk.startTikTok(name);
     }
   };
 
   const handleStop = () => {
     if (window.tiktalk) {
-      window.tiktalk.stopReader();
+      window.tiktalk.stopTikTok();
+      setConnectedUser('');
     }
   };
 
   const statusLabel = () => {
-    if (status === 'started') return { text: '● 接続中', style: styles.statusConnected };
+    if (status === 'connected') return { text: `● ${connectedUser || 'ユーザー'}に接続中`, style: styles.statusConnected };
+    if (status === 'speaking') return { text: `● 読み上げ中（キュー: ${queueSize}）`, style: styles.statusConnected };
+    if (status === 'disconnected') return { text: '○ 切断', style: styles.statusDisconnected };
     if (status === 'error') return { text: '● エラー', style: styles.statusError };
     return { text: '○ 停止中', style: styles.statusDisconnected };
   };
@@ -293,8 +319,9 @@ function App() {
         ) : (
           comments.map((c, i) => (
             <div key={i} style={styles.logItem}>
-              <span style={styles.logUser}>{c.user}</span>
-              <span style={styles.logComment}>: {c.comment}</span>
+              <span>{TYPE_ICONS[c.type] || TYPE_ICONS.chat} </span>
+              <span style={styles.logUser}>{c.username || c.user}</span>
+              <span style={styles.logComment}>: {c.text || c.comment}</span>
             </div>
           ))
         )}
