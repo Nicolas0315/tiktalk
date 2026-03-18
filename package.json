@@ -1,6 +1,6 @@
 {
   "name": "tiktalk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TikTokゲーム配信向け読み上げデスクトップアプリ",
   "main": "electron/main.js",
   "scripts": {
