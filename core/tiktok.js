@@ -3,7 +3,7 @@
 
 const { WebcastPushConnection } = require("tiktok-live-connector");
 const EventEmitter = require("events");
-const log = require("electron-log");
+const log = require('../electron/logger');
 
 const MAX_RECONNECT_ATTEMPTS = 3;
 const RECONNECT_DELAY_MS = 5000;

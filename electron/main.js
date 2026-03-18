@@ -5,21 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const http = require('http');
 const ElectronStore = require('electron-store');
-const log = require('electron-log');
-
-// --- ログ設定 ---
-// ファイル: %AppData%/TikTalk/logs/main.log (Windows)
-//           ~/Library/Logs/TikTalk/main.log  (macOS)
-log.transports.file.level = 'debug';
-log.transports.file.maxSize = 5 * 1024 * 1024; // 5MB
-log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
-log.transports.console.level = process.env.NODE_ENV === 'development' ? 'debug' : 'warn';
-
-// uncaught例外もキャプチャ
-// uncaught例外をキャプチャ（v4スタイル）
-process.on('uncaughtException', (error) => {
-  log.error('[UncaughtError]', error.message, error.stack);
-});
+const log = require('./logger'); // 自前ロガー（外部依存ゼロ）
 
 log.info('========== TikTalk 起動 ==========');
 log.info(`バージョン: ${require('../package.json').version}`);

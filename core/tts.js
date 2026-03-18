@@ -5,7 +5,7 @@ const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
-const log = require("electron-log");
+const log = require('../electron/logger');
 
 class TTSEngine {
   /**
