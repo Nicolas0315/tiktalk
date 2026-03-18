@@ -1,9 +1,16 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
+const fs = require('fs');
+const os = require('os');
+const http = require('http');
 
 let mainWindow = null;
 let pythonProcess = null;
+let setupProcess = null;
+
+// セットアップ完了フラグのパス
+const SETUP_FLAG = path.join(os.homedir(), '.tiktalk_setup_done');
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -97,6 +104,65 @@ function stopPythonProcess() {
   mainWindow?.webContents.send('status', { type: 'stopped' });
 }
 
+// --- セットアップウィザード関連 ---
+
+function getSetupPythonCommand(action) {
+  const scriptPath = path.join(__dirname, '..', 'python', 'setup_wizard.py');
+  const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+  const args = [scriptPath];
+  if (action) args.push(action);
+  return { command: pythonCmd, args };
+}
+
+function runSetupWizard(action) {
+  if (setupProcess) {
+    setupProcess.kill();
+    setupProcess = null;
+  }
+
+  const { command, args } = getSetupPythonCommand(action || 'full');
+  setupProcess = spawn(command, args, {
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+
+  let buffer = '';
+  setupProcess.stdout.on('data', (data) => {
+    buffer += data.toString('utf-8');
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const msg = JSON.parse(line);
+        mainWindow?.webContents.send('setup-progress', msg);
+      } catch {
+        // JSONパース失敗は無視
+      }
+    }
+  });
+
+  setupProcess.stderr.on('data', (data) => {
+    console.error('[Setup]', data.toString('utf-8').trim());
+  });
+
+  setupProcess.on('close', () => {
+    setupProcess = null;
+  });
+}
+
+function checkTTS() {
+  return new Promise((resolve) => {
+    const req = http.request(
+      { hostname: 'localhost', port: 5000, path: '/voice', method: 'HEAD', timeout: 5000 },
+      (res) => resolve(true)
+    );
+    req.on('error', () => resolve(false));
+    req.on('timeout', () => { req.destroy(); resolve(false); });
+    req.end();
+  });
+}
+
 // IPC ハンドラー
 ipcMain.on('start-reader', (_event, username) => {
   startPythonProcess(username);
@@ -106,7 +172,29 @@ ipcMain.on('stop-reader', () => {
   stopPythonProcess();
 });
 
-app.whenReady().then(createWindow);
+// セットアップ用IPC
+ipcMain.on('run-setup', (_event, action) => {
+  runSetupWizard(action);
+});
+
+ipcMain.handle('check-tts', async () => {
+  return await checkTTS();
+});
+
+ipcMain.on('setup-done', () => {
+  // メイン画面に切り替えるシグナルを送信
+  mainWindow?.webContents.send('setup-completed');
+});
+
+// セットアップ済みか確認してから起動
+app.whenReady().then(() => {
+  createWindow();
+  // セットアップ状態をRendererに通知
+  mainWindow.webContents.on('did-finish-load', () => {
+    const setupDone = fs.existsSync(SETUP_FLAG);
+    mainWindow.webContents.send('setup-state', { setupDone });
+  });
+});
 
 app.on('window-all-closed', () => {
   stopPythonProcess();
@@ -115,4 +203,8 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   stopPythonProcess();
+  if (setupProcess) {
+    setupProcess.kill();
+    setupProcess = null;
+  }
 });

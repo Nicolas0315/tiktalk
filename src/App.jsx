@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import SetupWizard from './SetupWizard';
 
 const styles = {
   app: {
@@ -131,6 +132,7 @@ const styles = {
 };
 
 function App() {
+  const [setupCompleted, setSetupCompleted] = useState(null); // null=未確認, true/false
   const [username, setUsername] = useState('');
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState('stopped'); // stopped | started | error
@@ -138,6 +140,21 @@ function App() {
   const [comments, setComments] = useState([]);
   const [ttsWarning, setTtsWarning] = useState(false);
   const logRef = useRef(null);
+
+  // セットアップ状態の確認
+  useEffect(() => {
+    if (!window.tiktalk?.onSetupState) {
+      // Electron外（ブラウザ開発時）はセットアップ済みとみなす
+      setSetupCompleted(true);
+      return;
+    }
+    window.tiktalk.onSetupState((data) => {
+      setSetupCompleted(data.setupDone);
+    });
+    window.tiktalk.onSetupCompleted(() => {
+      setSetupCompleted(true);
+    });
+  }, []);
 
   // Style-Bert-VITS2の起動確認
   useEffect(() => {
@@ -204,6 +221,20 @@ function App() {
   };
 
   const s = statusLabel();
+
+  // セットアップ状態確認中
+  if (setupCompleted === null) {
+    return (
+      <div style={styles.app}>
+        <div style={{ textAlign: 'center', marginTop: 100, color: '#888' }}>読み込み中...</div>
+      </div>
+    );
+  }
+
+  // セットアップ未完了 → ウィザード表示
+  if (!setupCompleted) {
+    return <SetupWizard onComplete={() => setSetupCompleted(true)} />;
+  }
 
   return (
     <div style={styles.app}>
